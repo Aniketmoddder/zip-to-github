@@ -7,10 +7,10 @@ const app = express();
 const PORT = 3000;
 
 // =========================
-// 🔐 CONFIG
+// 🔐 CONFIG (ENV BASED)
 // =========================
 const GITHUB_USERNAME = "Aniketmoddder";
-const GITHUB_TOKEN = "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";
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const REPO_NAME = "smmpanelrg";
 const BRANCH = "main";
 
@@ -31,6 +31,11 @@ app.post("/upload", upload.single("zip"), async (req, res) => {
   try {
     console.log("📦 ZIP received");
 
+    if (!GITHUB_TOKEN) {
+      console.log("❌ TOKEN NOT FOUND");
+      return res.status(500).send("Token missing");
+    }
+
     const zip = new AdmZip(req.file.buffer);
     const entries = zip.getEntries();
 
@@ -39,7 +44,7 @@ app.post("/upload", upload.single("zip"), async (req, res) => {
     for (const entry of entries) {
       if (entry.isDirectory) continue;
 
-      // 🔥 FIX PATH (remove root folder)
+      // 🔥 FIX PATH
       const filePath = entry.entryName.replace(/^.*?\//, "");
       const content = entry.getData().toString("base64");
 
@@ -70,7 +75,6 @@ async function uploadToGitHub(filePath, content) {
   const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${filePath}`;
 
   try {
-    // check file exists
     const check = await fetch(url, {
       headers: {
         Authorization: `token ${GITHUB_TOKEN}`
