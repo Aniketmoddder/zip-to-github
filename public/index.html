@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ZIP → GitHub PRO 🚀</title>
+</head>
+<body style="font-family:sans-serif;text-align:center;margin-top:60px;">
+
+<h1>🚀 ZIP → GitHub Upload</h1>
+
+<input type="file" id="file" />
+<br><br>
+<button onclick="upload()">Upload</button>
+
+<p id="status"></p>
+
+<script>
+async function upload() {
+  const file = document.getElementById("file").files[0];
+
+  if (!file) {
+    alert("Select ZIP first 😭");
+    return;
+  }
+
+  const form = new FormData();
+  form.append("zip", file);
+
+  document.getElementById("status").innerText = "Uploading...";
+
+  const res = await fetch("/upload", {
+    method: "POST",
+    body: form
+  });
+
+  if (res.ok) {
+    document.getElementById("status").innerText = "✅ Done!";
+  } else {
+    document.getElementById("status").innerText = "❌ Failed!";
+  }
+}
+</script>
+
+</body>
+</html>
