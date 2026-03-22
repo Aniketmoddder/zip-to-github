@@ -2,13 +2,12 @@ import express from "express";
 import multer from "multer";
 import AdmZip from "adm-zip";
 import fetch from "node-fetch";
-import path from "path";
 
 const app = express();
 const PORT = 3000;
 
 // =========================
-// 🔐 HARDCODE CONFIG
+// 🔐 CONFIG
 // =========================
 const GITHUB_USERNAME = "Aniketmoddder";
 const GITHUB_TOKEN = "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";
@@ -16,17 +15,17 @@ const REPO_NAME = "smmpanelrg";
 const BRANCH = "main";
 
 // =========================
-// 📁 STATIC FRONTEND
+// 📁 STATIC
 // =========================
 app.use(express.static("public"));
 
 // =========================
-// 📤 MULTER MEMORY (FAST)
+// 📤 MULTER
 // =========================
 const upload = multer({ storage: multer.memoryStorage() });
 
 // =========================
-// 🚀 MAIN UPLOAD ROUTE
+// 🚀 UPLOAD ROUTE
 // =========================
 app.post("/upload", upload.single("zip"), async (req, res) => {
   try {
@@ -40,13 +39,14 @@ app.post("/upload", upload.single("zip"), async (req, res) => {
     for (const entry of entries) {
       if (entry.isDirectory) continue;
 
-      const filePath = entry.entryName;
+      // 🔥 FIX PATH (remove root folder)
+      const filePath = entry.entryName.replace(/^.*?\//, "");
       const content = entry.getData().toString("base64");
 
       uploads.push(() => uploadToGitHub(filePath, content));
     }
 
-    // ⚡ Chunked parallel upload (VERY IMPORTANT)
+    // ⚡ chunk upload
     const chunkSize = 20;
 
     for (let i = 0; i < uploads.length; i += chunkSize) {
@@ -55,53 +55,64 @@ app.post("/upload", upload.single("zip"), async (req, res) => {
     }
 
     console.log("🚀 Upload complete");
-
     res.json({ success: true });
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ SERVER ERROR:", err);
     res.status(500).send("Upload failed");
   }
 });
 
 // =========================
-// 📡 GITHUB API FUNCTION
+// 📡 GITHUB UPLOAD
 // =========================
 async function uploadToGitHub(filePath, content) {
   const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${filePath}`;
 
-  // Check existing file
-  const check = await fetch(url, {
-    headers: {
-      Authorization: `token ${GITHUB_TOKEN}`
+  try {
+    // check file exists
+    const check = await fetch(url, {
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`
+      }
+    });
+
+    let sha = null;
+
+    if (check.status === 200) {
+      const data = await check.json();
+      sha = data.sha;
     }
-  });
 
-  let sha = null;
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: "🚀 Uploaded via ZIP tool",
+        content,
+        branch: BRANCH,
+        sha
+      })
+    });
 
-  if (check.status === 200) {
-    const data = await check.json();
-    sha = data.sha;
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error("❌ GitHub Error:", filePath, result);
+    } else {
+      console.log("✅ Uploaded:", filePath);
+    }
+
+  } catch (err) {
+    console.error("❌ Upload Failed:", filePath, err);
   }
-
-  // Upload
-  await fetch(url, {
-    method: "PUT",
-    headers: {
-      Authorization: `token ${GITHUB_TOKEN}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      message: "🚀 Uploaded via PRO ZIP tool",
-      content,
-      branch: BRANCH,
-      sha
-    })
-  });
 }
 
 // =========================
-// 🌐 START SERVER
+// 🌐 START
 // =========================
 app.listen(PORT, () => {
   console.log(`🔥 Running: http://localhost:${PORT}`);
