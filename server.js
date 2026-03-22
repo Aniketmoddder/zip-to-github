@@ -10,7 +10,7 @@ const PORT = 3000;
 // 🔐 CONFIG
 // =========================
 const GITHUB_USERNAME = "Aniketmoddder";
-const GITHUB_TOKEN = "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";
+const GITHUB_TOKEN = "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";
 const REPO_NAME = "smmpanelrg";
 const BRANCH = "main";
 
